@@ -7,28 +7,52 @@ output:
 ---
 
 ```{r setup, include=FALSE}
+
 # importing libraries
-library(reqd_packages, character.only = TRUE)
-library(flexdashboard)
+reqd_packages = c('flexdashboard', 'tidyverse', 'highcharter', 'gt', 'htmltools',
+                  'viridis', 'moments', 'psych')
+lapply(reqd_packages, library, character.only = TRUE)
+
 ```
-
-```{r}
-#Importing R
-df <- read.csv('')
-```
-
-
-Column {data-width=650}
------------------------------------------------------------------------
-
-### Chart A
-
 ```{r}
 
+# Importing data
+combined_data <- read.csv('./Combined_Dataset.csv')
+
 ```
 
-Column {data-width=350}
+Title-1 {data-orientation=rows}
+=======================================================================
+
+## Row 1 {data-height=10}
+
+Column {.tabset .tabset-fade data-width=350}
 -----------------------------------------------------------------------
+
+### Tele-Law Cases by Total Volume {data-height=1000}
+
+```{r fig.height=50}
+# Colors
+colors = read.csv("./Color_Pallete.csv")
+blue_pallete = colors[['Blue_Pallete']]
+#custom_colors <- viridis::mako(n = 10)
+
+# Most popular authors by reviews
+combined_data %>% 
+  arrange(desc(Advice_Enabled_FY23)) %>% 
+  head(10) %>% 
+  hchart('column', hcaes(x = State, y = Advice_Enabled_FY23 ,color = blue_pallete)) %>%
+  hc_add_theme(hc_theme_google()) %>% 
+  hc_tooltip(pointFormat = '<b>Number of Beneficiaries: </b> {point.y} <br>') %>% 
+  hc_title(text = 'Biggest Beneficiary States of Tele-Law Service',
+           style = list(fontSize = '20px', fontWeight = 'bold')) %>% 
+  hc_subtitle(text = 'By Total Number of People Who Enabled Legal Advice',
+              style = list(fontSize = '14px'))
+```
+
+
+
+## Column {data-width="350"}
 
 ### Chart B
 
@@ -41,4 +65,3 @@ Column {data-width=350}
 ```{r}
 
 ```
-
