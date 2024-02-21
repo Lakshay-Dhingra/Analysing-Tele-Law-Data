@@ -3,14 +3,13 @@ title: "Analysing Tele Case Data"
 output: 
   flexdashboard::flex_dashboard:
     orientation: columns
-    vertical_layout: fill
 ---
 
 ```{r setup, include=FALSE}
 
 # importing libraries
 reqd_packages = c('flexdashboard', 'tidyverse', 'highcharter', 'gt', 'htmltools',
-                  'viridis', 'moments', 'psych')
+                  'viridis', 'moments', 'psych', 'plotly')
 lapply(reqd_packages, library, character.only = TRUE)
 
 ```
@@ -21,47 +20,127 @@ combined_data <- read.csv('./Combined_Dataset.csv')
 
 ```
 
-Title-1 {data-orientation=rows}
+Tele-Law Overall State-wise Statistics {data-orientation=columns}
 =======================================================================
 
-## Row 1 {data-height=10}
-
-Column {.tabset .tabset-fade data-width=350}
+Column {.tabset .tabset-fade data-width=600}
 -----------------------------------------------------------------------
 
-### Tele-Law Cases by Total Volume {data-height=1000}
+### Tele-Law Cases Literacy V/S Number of Cases Registered
 
-```{r fig.height=50}
+```{r fig.height=5}
+
+#Combining 2022 and 2023 Data
+combined_data$Average_Cases_Registered_Per_Million_People <- (combined_data$Cases_Registered_FY22_Per_Million_People + combined_data$Cases_Registered_FY23_Per_Million_People)/2
+
+# Filter out "Lakshadweep" from the dataset
+filtered_data <- combined_data[combined_data$State != "Lakshadweep", ]
+
+Cases_Registered_Per_Million_People_Max = max(filtered_data$Average_Cases_Registered_Per_Million_People)
+
+multiplier = 100/Cases_Registered_Per_Million_People_Max
+
+filtered_data$Relative_Share_Of_Cases_Registered <- filtered_data$Average_Cases_Registered_Per_Million_People*multiplier
+
+Literacy_Rate_Max = max(filtered_data$Average_Literacy_Rate)
+
+multiplier = 100/Literacy_Rate_Max
+
+filtered_data$Relative_Literacy_Rate <- filtered_data$Average_Literacy_Rate*multiplier
+
+# Create the line plot
+plot_ly(data = filtered_data, x = ~State) %>%
+  add_lines(y = ~Relative_Literacy_Rate, name = "Relative Literacy Rate", line = list(color = "darkred")) %>%
+  add_lines(y = ~Relative_Share_Of_Cases_Registered, name = "Relative Share of Cases Registered", line = list(color = "black")) %>%
+  layout(title = "Literacy Rate vs Per-capita Cases Registered",
+         yaxis = list(title = ""),
+         xaxis = list(title = ""))
+```
+
+### Top-10 CSC's per Million People
+
+```{r fig.height=5}
 # Colors
-colors = read.csv("./Color_Pallete.csv")
-blue_pallete = colors[['Blue_Pallete']]
-#custom_colors <- viridis::mako(n = 10)
+custom_colors <- viridis::plasma(n = 10)
 
-# Most popular authors by reviews
+#Number of Service centers per million people
+combined_data$Number_Of_Service_Centers_per_Million_People = ((combined_data$No_of_CSCs_FY22 + combined_data$No_of_CSCs_FY22)*1000000)/(2*combined_data$Population)
+
+# States with most service centers per million
 combined_data %>% 
-  arrange(desc(Advice_Enabled_FY23)) %>% 
+  arrange(desc(Number_Of_Service_Centers_per_Million_People)) %>%
   head(10) %>% 
-  hchart('column', hcaes(x = State, y = Advice_Enabled_FY23 ,color = blue_pallete)) %>%
+  hchart('bar', hcaes(x = State, y = round(Number_Of_Service_Centers_per_Million_People), color = custom_colors)) %>% 
+  hc_add_theme(hc_theme_google()) %>% 
+  hc_tooltip(pointFormat = '<b>Beneficiaries per Million Population: </b> {point.y} <br>') %>% 
+  hc_title(text = 'Tele-Law Service Centers per Million People',
+           style = list(fontSize = '20px', fontWeight = 'bold'))
+```
+
+Column {data-width=400}
+-----------------------------------------------------------------------
+
+### {.no-padding data-height=600}
+
+```{r}
+#Combining 2022 and 2023 Data
+combined_data$Average_Advice_Enabled <- (combined_data$Advice_Enabled_FY22 + combined_data$Advice_Enabled_FY23)/2
+
+# Biggest Beneficiary States of Tele-Law Service
+combined_data %>% 
+  arrange(desc(Average_Advice_Enabled)) %>% 
+  head(10) %>% 
+  hchart('column', hcaes(x = State, y = round(Average_Advice_Enabled))) %>%
   hc_add_theme(hc_theme_google()) %>% 
   hc_tooltip(pointFormat = '<b>Number of Beneficiaries: </b> {point.y} <br>') %>% 
   hc_title(text = 'Biggest Beneficiary States of Tele-Law Service',
-           style = list(fontSize = '20px', fontWeight = 'bold')) %>% 
-  hc_subtitle(text = 'By Total Number of People Who Enabled Legal Advice',
-              style = list(fontSize = '14px'))
+           style = list(fontSize = '18px', fontWeight = 'bold')) %>% 
+  hc_subtitle(text = 'By Average Number of People Who Enabled Legal Advice in FY2022, FY2023',
+              style = list(fontSize = '12px'))%>%
+  hc_xAxis(title = list(text= ''), lineColor = 'midnightblue', labels = list(style = list(fontSize = '9px', fontWeight = 'bold'))) %>%
+  hc_yAxis(title = list(text = ''), tickInterval = 70000, max = 210000, lineColor = 'midnightblue') %>%
+  hc_plotOptions(
+    column = list(
+      borderColor = 'midnightblue',
+      color = list(
+        linearGradient = list(x1 = 0, x2 = 0, y1 = 0, y2 = 1),
+        stops = list(
+          c(0, 'rgb(155, 200, 255)'),
+          c(0.5, 'rgb(200, 220, 255)'),
+          c(1, 'rgb(255, 255, 255)')
+        )
+      ),
+      borderRadius = 1
+    )
+  )
 ```
 
-
-
-## Column {data-width="350"}
-
-### Chart B
+### {.no-padding data-height=400}
 
 ```{r}
 
+# This is going to be a datatable
+shown_data <- combined_data %>% 
+  filter(Cases_Registered_FY23 >= 2000) %>% 
+  arrange(desc(Cases_Registered_FY23)) %>% 
+  select(State, Cases_Registered_FY23, Advice_Enabled_FY23)
+
+# HTML table
+div(style = 'height:600px; overflow-y:scroll', gt(shown_data) %>% 
+      tab_header(title = md('Cases Registered in Major States')) %>% 
+      opt_table_font(font = list(google_font('Chivo'), default_fonts())) %>% 
+      tab_style(location = cells_column_labels(columns = everything()),
+                style = list(cell_borders(sides = 'bottom', 
+                                          weight = px(2)), 
+                             cell_text(weight = 'bold'))) %>% 
+      tab_options(table.font.size = px(12L),
+                  table.border.top.style = 'none',
+                  column_labels.border.bottom.width = 2,
+                  table_body.border.top.style = 'none',
+                  data_row.padding = px(3))
+    )
+
+
 ```
 
-### Chart C
 
-```{r}
-
-```
