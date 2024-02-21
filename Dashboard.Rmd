@@ -12,6 +12,12 @@ library(reqd_packages, character.only = TRUE)
 library(flexdashboard)
 ```
 
+```{r}
+#Importing R
+df <- read.csv('')
+```
+
+
 Column {data-width=650}
 -----------------------------------------------------------------------
 
