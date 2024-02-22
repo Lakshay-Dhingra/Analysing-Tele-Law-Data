@@ -33,7 +33,7 @@ Column {.tabset .tabset-fade data-width=600}
 #Combining 2022 and 2023 Data
 combined_data$Average_Cases_Registered_Per_Million_People <- (combined_data$Cases_Registered_FY22_Per_Million_People + combined_data$Cases_Registered_FY23_Per_Million_People)/2
 
-# Filter out "Lakshadweep" from the dataset
+# Filter out "Lakshadweep" (Outlier) from the dataset
 filtered_data <- combined_data[combined_data$State != "Lakshadweep", ]
 
 Cases_Registered_Per_Million_People_Max = max(filtered_data$Average_Cases_Registered_Per_Million_People)
@@ -48,13 +48,20 @@ multiplier = 100/Literacy_Rate_Max
 
 filtered_data$Relative_Literacy_Rate <- filtered_data$Average_Literacy_Rate*multiplier
 
-# Create the line plot
-plot_ly(data = filtered_data, x = ~State) %>%
-  add_lines(y = ~Relative_Literacy_Rate, name = "Relative Literacy Rate", line = list(color = "darkred")) %>%
-  add_lines(y = ~Relative_Share_Of_Cases_Registered, name = "Relative Share of Cases Registered", line = list(color = "black")) %>%
-  layout(title = "Literacy Rate vs Per-capita Cases Registered",
+# Sort the data frame based on the "Relative Share of Cases Registered" column
+sorted_data <- filtered_data[order(filtered_data$Relative_Share_Of_Cases_Registered, decreasing = TRUE), ]
+
+# Select the top 12 states
+top_states <- head(sorted_data, 12)
+
+plot_ly(data = top_states, x = ~State) %>%
+  add_bars(y = ~Relative_Literacy_Rate, name = "Relative Literacy Rate", marker = list(color = "skyblue")) %>%
+  add_bars(y = ~Relative_Share_Of_Cases_Registered, name = "Relative Share of Cases Registered", marker = list(color = "darkblue")) %>%
+  layout(title = list(text = "States by Per-Capita Relative Share of Cases Registered vs Their Literacy Rate", font = list(size = 16, color = "black", family = "Verdana", weight = "bold")),
          yaxis = list(title = ""),
-         xaxis = list(title = ""))
+         xaxis = list(title = "", tickfont = list(size = 9)),
+         margin = list(l = 0, r = 0, b = 10, t = 40),
+         legend = list(orientation = "h", x = 0.3, y = -0.24))
 ```
 
 ### Top-10 CSC's per Million People
